@@ -2,9 +2,15 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Version control
+## Version control & workflow
 
-GitHub repo: https://github.com/ecoban5/Magical-Labyrinth (remote `origin`, branch `main`). **Commit and push changes after completing each piece of work.** The `.gitignore` excludes `godot/.godot/` (import cache) and the locally extracted Godot editor binaries (`Godot_v*/`) — keep it that way.
+GitHub repo: https://github.com/ecoban5/Magical-Labyrinth (remote `origin`). The `.gitignore` excludes `godot/.godot/` (import cache) and the locally extracted Godot editor binaries (`Godot_v*/`) — keep it that way.
+
+**Branching workflow (agreed with the user):**
+- `main` is always playable — never commit unverified work to it.
+- Build each improvement on a `feature/<name>` branch; commit and push the branch as work progresses.
+- Merge to `main` only after BOTH: (1) the headless smoke test passes, and (2) the user has played the build and approved it. Don't merge on your own initiative.
+- Tag milestone states the user wants preserved (`v0.1`, `v0.2`, …) with annotated tags and push them. `v0.1` = first playable first-person dungeon.
 
 ## Project layout
 
