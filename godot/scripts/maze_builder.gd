@@ -394,6 +394,7 @@ func _add_base_details(wall_data: Array) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash("base-details")
 	var dirt_xf: Array[Transform3D] = []
+	var dirtmound_xf: Array[Transform3D] = []
 	var rock_xf: Array[Transform3D] = []
 	var grass_xf: Array[Transform3D] = []
 	var glow_xf: Array[Transform3D] = []
@@ -404,43 +405,56 @@ func _add_base_details(wall_data: Array) -> void:
 			var along := Vector3(0, 0, 1) if wd.is_ew else Vector3(1, 0, 0)
 			var base := Vector3(wd.wx, 0, wd.wz) + n * (WALL_T / 2)
 
-			# Dirt patch hugging the wall base (flat, irregular, semi-transparent)
+			# Dirt mound: a low heap piled against the wall base, with the
+			# quad stain spreading out from under it
 			if rng.randf() < 0.55:
-				var p := base + n * (0.1 + rng.randf() * 0.25) + along * ((rng.randf() - 0.5) * CELL * 0.8)
-				p.y = 0.012 + rng.randf() * 0.006  # avoid z-fighting the floor and each other
-				var s := 0.5 + rng.randf() * 1.0
+				var lat := (rng.randf() - 0.5) * CELL * 0.8
+				var heap := base + n * 0.04 + along * lat
+				var hs := 0.7 + rng.randf() * 1.0
+				heap.y = 0.0
+				var hb := Basis(Vector3.UP, rng.randf() * TAU)
+				hb = hb.scaled(Vector3(hs, hs * 0.32, hs * (0.6 + rng.randf() * 0.4)))
+				dirtmound_xf.append(Transform3D(hb, heap))
+				var p := base + n * (0.1 + rng.randf() * 0.15) + along * lat
+				p.y = 0.012 + rng.randf() * 0.006
+				var s := 1.0 + rng.randf() * 1.3
 				var b := Basis(Vector3.UP, rng.randf() * TAU) * Basis(Vector3.RIGHT, -PI / 2)
 				b = b.scaled(Vector3(s, s * (0.45 + rng.randf() * 0.4), 1))
 				dirt_xf.append(Transform3D(b, p))
 
-			# Crumbled stone: a cluster of small angular chunks, partly sunk in
-			if rng.randf() < 0.45:
-				var cluster := base + n * (0.12 + rng.randf() * 0.2) + along * ((rng.randf() - 0.5) * CELL * 0.8)
-				for i in 2 + rng.randi() % 4:
-					var rp := cluster + n * rng.randf() * 0.25 + along * ((rng.randf() - 0.5) * 0.45)
-					var rs := 0.35 + rng.randf() * 1.1
-					rp.y = rs * 0.045  # roughly half-buried
-					var rb := Basis.from_euler(Vector3(rng.randf() * TAU, rng.randf() * TAU, rng.randf() * TAU))
-					rb = rb.scaled(Vector3(rs, rs * (0.6 + rng.randf() * 0.5), rs * (0.7 + rng.randf() * 0.5)))
+			# Crumbled wall stone: large angular blocks fallen at the base,
+			# leaning against the wall, made of the wall's own material
+			if rng.randf() < 0.4:
+				var cluster_lat := (rng.randf() - 0.5) * CELL * 0.8
+				for i in 1 + rng.randi() % 3:
+					var rs := 0.6 + rng.randf() * 1.1  # 0.2–0.55 m chunks
+					var rp := base + n * (0.05 + rng.randf() * 0.12 + rs * 0.06) \
+						+ along * (cluster_lat + (rng.randf() - 0.5) * 0.5)
+					rp.y = 0.16 * rs * 0.3  # two thirds buried, big enough to still poke out
+					var rb := Basis(Vector3.UP, rng.randf() * TAU)
+					# Tip the block back against the wall so it looks fallen, not placed
+					rb = Basis(along, (rng.randf() - 0.5) * 0.5) * Basis(n.cross(Vector3.UP), 0.15 + rng.randf() * 0.3) * rb
+					rb = rb.scaled(Vector3(rs, rs * (0.5 + rng.randf() * 0.5), rs * (0.6 + rng.randf() * 0.5)))
 					rock_xf.append(Transform3D(rb, rp))
 
-			# Grass tuft: a few thin blades leaning at random angles
+			# Grass tuft growing out of the wall/floor crack itself
 			if rng.randf() < 0.3:
-				var tuft := base + n * (0.12 + rng.randf() * 0.22) + along * ((rng.randf() - 0.5) * CELL * 0.75)
-				for i in 3 + rng.randi() % 5:
-					var gp := tuft + Vector3((rng.randf() - 0.5) * 0.14, 0, (rng.randf() - 0.5) * 0.14)
-					var gs := 0.6 + rng.randf() * 0.9
-					gp.y = 0.1 * gs  # cone origin is its center
+				var tuft := base + n * (0.03 + rng.randf() * 0.08) + along * ((rng.randf() - 0.5) * CELL * 0.75)
+				for i in 5 + rng.randi() % 5:
+					var gp := tuft + Vector3((rng.randf() - 0.5) * 0.12, 0, (rng.randf() - 0.5) * 0.12)
+					var gs := 0.7 + rng.randf() * 0.8
+					gp.y = 0.19 * gs
 					var gb := Basis(Vector3.UP, rng.randf() * TAU)
-					gb = gb * Basis(Vector3.RIGHT, (rng.randf() - 0.3) * 0.45)  # lean
+					# Blades lean away from the wall, like growth seeking the open
+					gb = Basis(n.cross(Vector3.DOWN), rng.randf() * 0.5) * gb
 					gb = gb.scaled(Vector3(gs, gs, gs))
 					grass_xf.append(Transform3D(gb, gp))
 
 			# Rare softly-glowing spore plant — the magical accent
 			if rng.randf() < 0.06:
-				var sp := base + n * (0.15 + rng.randf() * 0.2) + along * ((rng.randf() - 0.5) * CELL * 0.7)
-				var ss := 0.6 + rng.randf() * 0.8
-				sp.y = 0.045 * ss
+				var sp := base + n * (0.08 + rng.randf() * 0.15) + along * ((rng.randf() - 0.5) * CELL * 0.7)
+				var ss := 0.8 + rng.randf() * 1.0
+				sp.y = 0.05 * ss
 				var sb := Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(ss, ss * (0.8 + rng.randf() * 0.5), ss))
 				glow_xf.append(Transform3D(sb, sp))
 
@@ -465,19 +479,29 @@ func _add_base_details(wall_data: Array) -> void:
 	dirt_mesh.material = dirt_mat
 	_make_multimesh(dirt_mesh, dirt_xf)
 
-	# Rocks: low-poly spheres read as angular rubble once randomly scaled
-	var rock_mat := StandardMaterial3D.new()
-	rock_mat.albedo_color = Color(0.38, 0.34, 0.3)
-	rock_mat.roughness = 0.95
+	# Dirt mounds: low squashed heaps against the wall base
+	var mound_mat := StandardMaterial3D.new()
+	mound_mat.albedo_color = Color(0.14, 0.1, 0.07)
+	mound_mat.roughness = 1.0
+	var mound_mesh := SphereMesh.new()
+	mound_mesh.radius = 0.28
+	mound_mesh.height = 0.56
+	mound_mesh.radial_segments = 7
+	mound_mesh.rings = 4
+	mound_mesh.material = mound_mat
+	_make_multimesh(mound_mesh, dirtmound_xf)
+
+	# Fallen wall blocks: low-poly chunks in the wall's own stone material so
+	# they read as masonry that crumbled off, not foreign pebbles
 	var rock_mesh := SphereMesh.new()
-	rock_mesh.radius = 0.09
-	rock_mesh.height = 0.18
-	rock_mesh.radial_segments = 5
-	rock_mesh.rings = 3
-	rock_mesh.material = rock_mat
+	rock_mesh.radius = 0.16
+	rock_mesh.height = 0.32
+	rock_mesh.radial_segments = 4
+	rock_mesh.rings = 2
+	rock_mesh.material = _wall_mat
 	_make_multimesh(rock_mesh, rock_xf)
 
-	# Grass: thin cones with the faintest magical glow so they read in the dark
+	# Grass: thin blades with the faintest magical glow so they read in the dark
 	var grass_mat := StandardMaterial3D.new()
 	grass_mat.albedo_color = Color(0.16, 0.38, 0.14)
 	grass_mat.roughness = 1.0
@@ -486,8 +510,8 @@ func _add_base_details(wall_data: Array) -> void:
 	grass_mat.emission_energy_multiplier = 0.25
 	var grass_mesh := CylinderMesh.new()
 	grass_mesh.top_radius = 0.0
-	grass_mesh.bottom_radius = 0.011
-	grass_mesh.height = 0.2
+	grass_mesh.bottom_radius = 0.014
+	grass_mesh.height = 0.38
 	grass_mesh.radial_segments = 4
 	grass_mesh.material = grass_mat
 	_make_multimesh(grass_mesh, grass_xf)
@@ -499,8 +523,8 @@ func _add_base_details(wall_data: Array) -> void:
 	glow_mat.emission = Color(0.25, 0.8, 0.7)
 	glow_mat.emission_energy_multiplier = 1.4
 	var glow_mesh := SphereMesh.new()
-	glow_mesh.radius = 0.05
-	glow_mesh.height = 0.09
+	glow_mesh.radius = 0.07
+	glow_mesh.height = 0.12
 	glow_mesh.radial_segments = 6
 	glow_mesh.rings = 3
 	glow_mesh.material = glow_mat
