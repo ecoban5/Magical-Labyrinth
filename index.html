@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Magical Labyrinth</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&family=Cinzel:wght@400;700&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #1a0e00;
+    background-image:
+      radial-gradient(ellipse at top, #2d1a05 0%, #0d0700 60%),
+      url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Cinzel', 'Georgia', serif;
+    color: #d4a843;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  h1 {
+    font-size: 2.8rem;
+    text-shadow: 0 0 20px #c8860a, 0 0 40px #8b5e0a;
+    letter-spacing: 4px;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+
+  .subtitle {
+    font-size: 0.85rem;
+    color: #a07830;
+    letter-spacing: 3px;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  #ui {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .difficulty-btn {
+    font-family: 'Cinzel', serif;
+    padding: 8px 20px;
+    border: 2px solid #7a5520;
+    background: linear-gradient(180deg, #3d2208 0%, #1f1004 100%);
+    color: #c8860a;
+    cursor: pointer;
+    font-size: 0.85rem;
+    letter-spacing: 2px;
+    transition: all 0.2s;
+    clip-path: polygon(6px 0%, calc(100% - 6px) 0%, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0% calc(100% - 6px), 0% 6px);
+  }
+
+  .difficulty-btn:hover, .difficulty-btn.active {
+    border-color: #d4a843;
+    background: linear-gradient(180deg, #6b3d10 0%, #3d1f05 100%);
+    color: #f0c060;
+    box-shadow: 0 0 12px #c8860a88;
+  }
+
+  .difficulty-btn.active {
+    box-shadow: 0 0 20px #d4a843aa;
+  }
+
+  #new-game-btn {
+    font-family: 'Cinzel', serif;
+    padding: 8px 24px;
+    border: 2px solid #d4a843;
+    background: linear-gradient(180deg, #7a4510 0%, #3d1f05 100%);
+    color: #f5d070;
+    cursor: pointer;
+    font-size: 0.9rem;
+    letter-spacing: 2px;
+    transition: all 0.2s;
+    clip-path: polygon(8px 0%, calc(100% - 8px) 0%, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0% calc(100% - 8px), 0% 8px);
+  }
+
+  #new-game-btn:hover {
+    background: linear-gradient(180deg, #a05a18 0%, #5a2d08 100%);
+    box-shadow: 0 0 20px #d4a84388;
+    color: #fff0a0;
+  }
+
+  #music-btn {
+    font-family: 'Cinzel', serif;
+    padding: 8px 16px;
+    border: 2px solid #7a5520;
+    background: linear-gradient(180deg, #1a2d10 0%, #0d1808 100%);
+    color: #80c060;
+    cursor: pointer;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+    clip-path: polygon(6px 0%, calc(100% - 6px) 0%, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0% calc(100% - 6px), 0% 6px);
+  }
+
+  #music-btn:hover { border-color: #a0d880; }
+  #music-btn.muted { color: #607050; border-color: #405030; }
+
+  #stats {
+    display: flex;
+    gap: 30px;
+    margin-bottom: 10px;
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    color: #a07830;
+  }
+
+  #stats span { color: #d4a843; }
+
+  #canvas-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+
+  #maze-canvas {
+    display: block;
+    border: 3px solid #7a5520;
+    box-shadow: 0 0 40px #c8860a44, inset 0 0 20px #00000088;
+    background: #0d0500;
+  }
+
+  #overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #00000099;
+    backdrop-filter: blur(3px);
+  }
+
+  #overlay h2 {
+    font-size: 2rem;
+    color: #f5d070;
+    text-shadow: 0 0 20px #d4a843;
+    margin-bottom: 12px;
+    letter-spacing: 4px;
+  }
+
+  #overlay p {
+    color: #c8a050;
+    letter-spacing: 2px;
+    font-size: 0.85rem;
+  }
+
+  #overlay.hidden { display: none; }
+
+  .controls-hint {
+    margin-top: 16px;
+    font-size: 0.72rem;
+    color: #605040;
+    letter-spacing: 2px;
+    text-align: center;
+  }
+
+  .key {
+    display: inline-block;
+    padding: 1px 6px;
+    border: 1px solid #605040;
+    border-radius: 3px;
+    font-size: 0.7rem;
+    color: #806050;
+    background: #1a0e00;
+  }
+</style>
+</head>
+<body>
+
+<h1>⚔ The Magical Labyrinth ⚔</h1>
+<div class="subtitle">~ Navigate the Ancient Maze ~</div>
+
+<div id="ui">
+  <button class="difficulty-btn active" data-diff="easy">Squire</button>
+  <button class="difficulty-btn" data-diff="medium">Knight</button>
+  <button class="difficulty-btn" data-diff="hard">Champion</button>
+  <button class="difficulty-btn" data-diff="legendary">Legendary</button>
+  <button id="new-game-btn">⚔ New Quest</button>
+  <button id="music-btn">♪ Music ON</button>
+  <button class="difficulty-btn" id="mode-3d-btn" onclick="window.location.href='labyrinth3d.html'">⬡ 3D Mode</button>
+</div>
+
+<div id="stats">
+  Steps: <span id="step-count">0</span>
+  &nbsp;|&nbsp;
+  Time: <span id="timer">0:00</span>
+  &nbsp;|&nbsp;
+  Best: <span id="best-time">--</span>
+</div>
+
+<div id="canvas-wrapper">
+  <canvas id="maze-canvas"></canvas>
+  <div id="overlay">
+    <h2 id="overlay-title">The Labyrinth Awaits</h2>
+    <p id="overlay-msg">Press <strong>New Quest</strong> to begin</p>
+  </div>
+</div>
+
+<div class="controls-hint">
+  <span class="key">↑</span> <span class="key">↓</span> <span class="key">←</span> <span class="key">→</span> to move &nbsp;|&nbsp;
+  <span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> also works
+</div>
+
+<script>
+// ─── Config ───────────────────────────────────────────────────────────────────
+const DIFFICULTIES = {
+  easy:       { cols: 11, rows: 11, cellSize: 42, name: 'Squire',    portals: 2 },
+  medium:     { cols: 19, rows: 19, cellSize: 32, name: 'Knight',    portals: 4 },
+  hard:       { cols: 31, rows: 31, cellSize: 22, name: 'Champion',  portals: 6 },
+  legendary:  { cols: 45, rows: 45, cellSize: 16, name: 'Legendary', portals: 8 },
+};
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let difficulty = 'easy';
+let maze = null;
+let player = { x: 0, y: 0 };         // logical grid position
+let playerVis = { x: 0, y: 0 };      // smooth visual position (fractional cells)
+let playerMoving = false;             // currently animating a step
+let moveQueue = null;                 // buffered next move { dx, dy }
+const MOVE_SPEED = 10;               // cells per second
+let lastFrameTime = 0;
+let heldKeys = {};                    // tracks held arrow/wasd keys
+let goal = { x: 0, y: 0 };
+let portals = [];                     // array of {x, y} portal positions
+let portalCooldown = false;          // prevents instant re-teleport
+let teleportFlash = 0;               // flash animation timer (0 = off)
+let steps = 0;
+let timerInterval = null;
+let startTime = null;
+let gameActive = false;
+let bestTimes = {};
+let visitedCells = new Set();
+let audioCtx = null;
+let musicMuted = false;
+let musicScheduler = null;
+
+// ─── Canvas ───────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('maze-canvas');
+const ctx = canvas.getContext('2d');
+
+// ─── Maze Generation (Recursive Backtracker) ──────────────────────────────────
+function generateMaze(cols, rows) {
+  const cells = Array.from({ length: rows }, (_, y) =>
+    Array.from({ length: cols }, (_, x) => ({
+      x, y,
+      walls: { N: true, S: true, E: true, W: true },
+      visited: false,
+    }))
+  );
+
+  const stack = [];
+  const start = cells[0][0];
+  start.visited = true;
+  stack.push(start);
+
+  const dirs = [
+    { dx: 0, dy: -1, from: 'S', to: 'N' },
+    { dx: 0, dy:  1, from: 'N', to: 'S' },
+    { dx: 1, dy:  0, from: 'W', to: 'E' },
+    { dx:-1, dy:  0, from: 'E', to: 'W' },
+  ];
+
+  while (stack.length) {
+    const current = stack[stack.length - 1];
+    const neighbors = dirs
+      .map(d => ({ d, nx: current.x + d.dx, ny: current.y + d.dy }))
+      .filter(({ nx, ny }) =>
+        nx >= 0 && nx < cols && ny >= 0 && ny < rows && !cells[ny][nx].visited
+      );
+
+    if (!neighbors.length) { stack.pop(); continue; }
+
+    const { d, nx, ny } = neighbors[Math.floor(Math.random() * neighbors.length)];
+    const next = cells[ny][nx];
+    current.walls[d.to] = false;
+    next.walls[d.from] = false;
+    next.visited = true;
+    stack.push(next);
+  }
+
+  return cells;
+}
+
+// ─── Portal Generation ────────────────────────────────────────────────────────
+function generatePortals(count, cols, rows) {
+  const forbidden = new Set(['0,0', `${cols-1},${rows-1}`]);
+  const positions = [];
+  let attempts = 0;
+  while (positions.length < count && attempts < 2000) {
+    attempts++;
+    const x = 1 + Math.floor(Math.random() * (cols - 2));
+    const y = 1 + Math.floor(Math.random() * (rows - 2));
+    const key = `${x},${y}`;
+    if (!forbidden.has(key)) {
+      forbidden.add(key);
+      positions.push({ x, y });
+    }
+  }
+  // Guarantee at least 2 (or 0 if maze is too small)
+  return positions.length >= 2 ? positions : [];
+}
+
+// ─── Rendering ────────────────────────────────────────────────────────────────
+function resizeCanvas(cols, rows, cellSize) {
+  const W = cols * cellSize + 1;
+  const H = rows * cellSize + 1;
+  canvas.width = W;
+  canvas.height = H;
+  // Keep it from getting too big on screen
+  const maxW = Math.min(window.innerWidth - 40, 700);
+  const maxH = Math.min(window.innerHeight - 240, 700);
+  const scale = Math.min(maxW / W, maxH / H, 1);
+  canvas.style.width  = Math.round(W * scale) + 'px';
+  canvas.style.height = Math.round(H * scale) + 'px';
+}
+
+function drawMaze() {
+  const now = performance.now();
+  const dt = lastFrameTime ? Math.min((now - lastFrameTime) / 1000, 0.05) : 0;
+  lastFrameTime = now;
+
+  const { cols, rows, cellSize } = DIFFICULTIES[difficulty];
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Background
+  ctx.fillStyle = '#0d0500';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  requestAnimationFrame(drawMaze);
+  if (!maze) return;
+
+
+  // ── Advance smooth visual position toward logical position ──
+  if (playerMoving) {
+    const dx = player.x - playerVis.x;
+    const dy = player.y - playerVis.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const step = MOVE_SPEED * dt;
+    if (dist <= step) {
+      playerVis.x = player.x;
+      playerVis.y = player.y;
+      playerMoving = false;
+      // Process buffered move or held key
+      const next = moveQueue || getHeldMove();
+      moveQueue = null;
+      if (next) applyMove(next.dx, next.dy);
+    } else {
+      playerVis.x += (dx / dist) * step;
+      playerVis.y += (dy / dist) * step;
+    }
+  }
+
+  // Draw visited trail
+  visitedCells.forEach(key => {
+    const [vx, vy] = key.split(',').map(Number);
+    ctx.fillStyle = 'rgba(120, 80, 20, 0.18)';
+    ctx.fillRect(vx * cellSize + 1, vy * cellSize + 1, cellSize - 1, cellSize - 1);
+  });
+
+  // Goal glow
+  const gx = goal.x * cellSize + cellSize / 2;
+  const gy = goal.y * cellSize + cellSize / 2;
+  const goalGlow = ctx.createRadialGradient(gx, gy, 0, gx, gy, cellSize);
+  goalGlow.addColorStop(0, 'rgba(80, 200, 80, 0.6)');
+  goalGlow.addColorStop(1, 'rgba(80, 200, 80, 0)');
+  ctx.fillStyle = goalGlow;
+  ctx.fillRect(goal.x * cellSize, goal.y * cellSize, cellSize, cellSize);
+
+  // Draw portals
+  const now2 = Date.now();
+  const t = now2 / 1000;
+  portals.forEach((p, i) => {
+    const pcx = p.x * cellSize + cellSize / 2;
+    const pcy = p.y * cellSize + cellSize / 2;
+    const r = cellSize * 0.38;
+    // Outer spinning ring
+    ctx.save();
+    ctx.translate(pcx, pcy);
+    ctx.rotate(t * 2 + i * Math.PI * 0.7);
+    const ring = ctx.createRadialGradient(0, 0, r * 0.4, 0, 0, r);
+    ring.addColorStop(0,   'rgba(140, 60, 220, 0.0)');
+    ring.addColorStop(0.6, 'rgba(140, 60, 220, 0.5)');
+    ring.addColorStop(0.85,'rgba(200,120, 255, 0.9)');
+    ring.addColorStop(1,   'rgba(80,  20, 160, 0.0)');
+    ctx.fillStyle = ring;
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+    // Inner swirl highlight
+    ctx.rotate(-t * 5);
+    ctx.strokeStyle = `rgba(220,160,255,${0.4 + 0.3 * Math.sin(t * 3 + i)})`;
+    ctx.lineWidth = Math.max(1, cellSize * 0.07);
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.45, 0, Math.PI * 1.4); ctx.stroke();
+    ctx.restore();
+    // Glow under portal
+    const glow = ctx.createRadialGradient(pcx, pcy, 0, pcx, pcy, r * 1.6);
+    glow.addColorStop(0,   'rgba(160, 80, 255, 0.35)');
+    glow.addColorStop(1,   'rgba(160, 80, 255, 0.0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(pcx, pcy, r * 1.6, 0, Math.PI * 2); ctx.fill();
+  });
+
+  // Teleport flash overlay
+  if (teleportFlash > 0) {
+    ctx.fillStyle = `rgba(180, 100, 255, ${teleportFlash * 0.55})`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    teleportFlash = Math.max(0, teleportFlash - 0.06);
+  }
+
+  // Draw walls
+  const wallColor = '#7a5520';
+  const wallWidth = Math.max(1, cellSize / 10);
+  ctx.strokeStyle = wallColor;
+  ctx.lineWidth = wallWidth;
+  ctx.lineCap = 'square';
+
+  maze.forEach(row => row.forEach(cell => {
+    const cx = cell.x * cellSize;
+    const cy = cell.y * cellSize;
+    ctx.strokeStyle = '#c89040';
+    ctx.lineWidth = wallWidth;
+    if (cell.walls.N) { ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + cellSize, cy); ctx.stroke(); }
+    if (cell.walls.S) { ctx.beginPath(); ctx.moveTo(cx, cy + cellSize); ctx.lineTo(cx + cellSize, cy + cellSize); ctx.stroke(); }
+    if (cell.walls.E) { ctx.beginPath(); ctx.moveTo(cx + cellSize, cy); ctx.lineTo(cx + cellSize, cy + cellSize); ctx.stroke(); }
+    if (cell.walls.W) { ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, cy + cellSize); ctx.stroke(); }
+  }));
+
+  // Goal icon (treasure chest / portal)
+  const pulse = 0.85 + 0.15 * Math.sin(now2 / 600);
+  ctx.save();
+  ctx.translate(gx, gy);
+  ctx.scale(pulse, pulse);
+  ctx.font = `${Math.round(cellSize * 0.65)}px serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🏰', 0, 0);
+  ctx.restore();
+
+  // Player (uses smooth visual position)
+  const px = playerVis.x * cellSize + cellSize / 2;
+  const py = playerVis.y * cellSize + cellSize / 2;
+  const r = cellSize * 0.35;
+
+  // Player glow
+  const playerGlow = ctx.createRadialGradient(px, py, 0, px, py, r * 2);
+  playerGlow.addColorStop(0, 'rgba(200, 140, 40, 0.5)');
+  playerGlow.addColorStop(1, 'rgba(200, 140, 40, 0)');
+  ctx.fillStyle = playerGlow;
+  ctx.beginPath();
+  ctx.arc(px, py, r * 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.save();
+  ctx.translate(px, py);
+  ctx.font = `${Math.round(cellSize * 0.62)}px serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🧙', 0, 1);
+  ctx.restore();
+
+}
+
+// ─── Game Logic ───────────────────────────────────────────────────────────────
+function startGame() {
+  const { cols, rows, cellSize, portals: portalCount } = DIFFICULTIES[difficulty];
+  maze = generateMaze(cols, rows);
+  player = { x: 0, y: 0 };
+  playerVis = { x: 0, y: 0 };
+  playerMoving = false;
+  moveQueue = null;
+  goal = { x: cols - 1, y: rows - 1 };
+  portals = generatePortals(portalCount, cols, rows);
+  portalCooldown = false;
+  teleportFlash = 0;
+  steps = 0;
+  visitedCells = new Set();
+  visitedCells.add('0,0');
+  gameActive = true;
+
+  resizeCanvas(cols, rows, cellSize);
+  document.getElementById('overlay').classList.add('hidden');
+  document.getElementById('step-count').textContent = '0';
+
+  clearInterval(timerInterval);
+  startTime = Date.now();
+  timerInterval = setInterval(updateTimer, 500);
+
+  if (!audioCtx) initAudio();
+  if (!musicMuted) startMusic();
+}
+
+// Called by input — starts move immediately or buffers one step ahead
+function movePlayer(dx, dy) {
+  if (!gameActive) return;
+  if (!playerMoving) {
+    applyMove(dx, dy);
+  } else {
+    // Only buffer if the buffered direction is actually passable (checked in applyMove)
+    moveQueue = { dx, dy };
+  }
+}
+
+// Reads the currently held key direction (for auto-repeat while key held)
+function getHeldMove() {
+  if (heldKeys['ArrowUp']    || heldKeys['w'] || heldKeys['W']) return { dx: 0, dy: -1 };
+  if (heldKeys['ArrowDown']  || heldKeys['s'] || heldKeys['S']) return { dx: 0, dy:  1 };
+  if (heldKeys['ArrowLeft']  || heldKeys['a'] || heldKeys['A']) return { dx: -1, dy: 0 };
+  if (heldKeys['ArrowRight'] || heldKeys['d'] || heldKeys['D']) return { dx:  1, dy: 0 };
+  return null;
+}
+
+// Actually moves the logical player and starts the animation
+function applyMove(dx, dy) {
+  if (!gameActive) return;
+  const cell = maze[player.y][player.x];
+  const dirMap = { '0,-1': 'N', '0,1': 'S', '1,0': 'E', '-1,0': 'W' };
+  const dir = dirMap[`${dx},${dy}`];
+  if (!dir || cell.walls[dir]) return;
+
+  player.x += dx;
+  player.y += dy;
+  playerMoving = true;
+  steps++;
+  visitedCells.add(`${player.x},${player.y}`);
+  document.getElementById('step-count').textContent = steps;
+
+  if (player.x === goal.x && player.y === goal.y) {
+    // Let animation finish, then win
+    const checkWin = setInterval(() => {
+      if (!playerMoving) { clearInterval(checkWin); winGame(); }
+    }, 16);
+    return;
+  }
+
+  // Portal check — only if not on cooldown
+  if (!portalCooldown) {
+    const portalIdx = portals.findIndex(p => p.x === player.x && p.y === player.y);
+    if (portalIdx !== -1) {
+      // Pick a random *different* portal to land on
+      const others = portals.filter((_, i) => i !== portalIdx);
+      const dest = others[Math.floor(Math.random() * others.length)];
+      // Wait for the step animation to finish, then teleport
+      const doTeleport = setInterval(() => {
+        if (!playerMoving) {
+          clearInterval(doTeleport);
+          player.x = dest.x;
+          player.y = dest.y;
+          playerVis.x = dest.x;
+          playerVis.y = dest.y;
+          visitedCells.add(`${dest.x},${dest.y}`);
+          teleportFlash = 1;
+          playPortalSound();
+          // Cooldown so landing on a portal doesn't chain-teleport immediately
+          portalCooldown = true;
+          setTimeout(() => { portalCooldown = false; }, 600);
+        }
+      }, 16);
+    }
+  }
+}
+
+function winGame() {
+  gameActive = false;
+  clearInterval(timerInterval);
+  stopMusic();
+
+  const elapsed = Date.now() - startTime;
+  const mm = Math.floor(elapsed / 60000);
+  const ss = Math.floor((elapsed % 60000) / 1000);
+  const timeStr = `${mm}:${ss.toString().padStart(2,'0')}`;
+
+  if (!bestTimes[difficulty] || elapsed < bestTimes[difficulty]) {
+    bestTimes[difficulty] = elapsed;
+    document.getElementById('best-time').textContent = timeStr;
+  }
+
+  const overlay = document.getElementById('overlay');
+  document.getElementById('overlay-title').textContent = '⚔ Victory! ⚔';
+  document.getElementById('overlay-msg').innerHTML =
+    `You escaped in <strong>${steps}</strong> steps &amp; <strong>${timeStr}</strong>!<br>
+     <span style="font-size:0.8em;color:#a07830;margin-top:8px;display:block">Press <strong>New Quest</strong> to play again</span>`;
+  overlay.classList.remove('hidden');
+
+  playFanfare();
+}
+
+function updateTimer() {
+  if (!startTime) return;
+  const elapsed = Date.now() - startTime;
+  const mm = Math.floor(elapsed / 60000);
+  const ss = Math.floor((elapsed % 60000) / 1000);
+  document.getElementById('timer').textContent = `${mm}:${ss.toString().padStart(2,'0')}`;
+}
+
+// ─── Medieval Music (Web Audio API) ──────────────────────────────────────────
+function initAudio() {
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+// Medieval-ish scale: D dorian mode notes (Hz)
+const DORIAN_D = [
+  293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25, 587.33,
+  659.25, 698.46, 784.00, 880.00
+];
+
+// A simple repeating melody pattern (indices into DORIAN_D)
+const MELODY = [
+  [0,0.5],[2,0.5],[3,0.5],[5,0.5],
+  [7,0.5],[5,0.5],[3,0.5],[2,0.5],
+  [0,1.0],[0,0.5],[2,0.5],
+  [3,0.5],[5,0.5],[7,0.5],[8,0.5],
+  [7,0.5],[5,0.5],[3,0.5],[2,0.5],
+  [0,1.5],
+  [3,0.5],[5,0.5],[7,0.5],[5,0.5],
+  [3,1.0],[2,0.5],[0,0.5],
+  [2,0.5],[3,0.5],[5,0.5],[7,0.5],
+  [5,0.5],[3,0.5],[2,0.5],[0,0.5],
+  [0,2.0],
+];
+
+const DRONE_NOTES = [73.42, 110.00, 146.83]; // D2, A2, D3
+
+let musicNodes = [];
+
+function playNote(freq, startTime, duration, volume = 0.12, wave = 'triangle') {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.type = wave;
+  osc.frequency.setValueAtTime(freq, startTime);
+  gain.gain.setValueAtTime(0, startTime);
+  gain.gain.linearRampToValueAtTime(volume, startTime + 0.04);
+  gain.gain.setValueAtTime(volume, startTime + duration * 0.7);
+  gain.gain.linearRampToValueAtTime(0, startTime + duration);
+  osc.start(startTime);
+  osc.stop(startTime + duration + 0.05);
+  musicNodes.push(osc);
+}
+
+function scheduleMelody() {
+  if (!audioCtx || musicMuted) return;
+  const tempo = 1.2; // seconds per beat reference
+  let t = audioCtx.currentTime + 0.1;
+
+  MELODY.forEach(([noteIdx, beats]) => {
+    const dur = beats * tempo;
+    playNote(DORIAN_D[noteIdx], t, dur, 0.10, 'triangle');
+    // Harmony: a fifth above
+    if (Math.random() > 0.5) {
+      const harmIdx = Math.min(noteIdx + 4, DORIAN_D.length - 1);
+      playNote(DORIAN_D[harmIdx], t, dur, 0.04, 'sine');
+    }
+    t += dur;
+  });
+
+  // Drone
+  DRONE_NOTES.forEach(freq => {
+    playNote(freq, audioCtx.currentTime + 0.1, t - audioCtx.currentTime, 0.04, 'sawtooth');
+  });
+
+  // Schedule next repetition
+  const totalDur = (t - audioCtx.currentTime) * 1000;
+  musicScheduler = setTimeout(scheduleMelody, totalDur - 300);
+}
+
+function startMusic() {
+  if (!audioCtx) initAudio();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  clearTimeout(musicScheduler);
+  scheduleMelody();
+}
+
+function stopMusic() {
+  clearTimeout(musicScheduler);
+  musicNodes.forEach(n => { try { n.stop(); } catch(e) {} });
+  musicNodes = [];
+}
+
+function playPortalSound() {
+  if (!audioCtx || musicMuted) return;
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  // Rising whoosh: quick sweep up then shimmer
+  const sweep = [220, 330, 494, 740, 1109, 880, 660];
+  let t = audioCtx.currentTime + 0.02;
+  sweep.forEach((freq, i) => {
+    playNote(freq, t + i * 0.055, 0.18, 0.09, 'sine');
+  });
+  // High shimmer
+  [1320, 1760, 2093].forEach((freq, i) => {
+    playNote(freq, t + 0.3 + i * 0.07, 0.15, 0.05, 'triangle');
+  });
+}
+
+function playFanfare() {
+  if (!audioCtx || musicMuted) return;
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  const fanfare = [
+    [392, 0.15], [523, 0.15], [659, 0.15], [784, 0.4],
+    [784, 0.15], [880, 0.15], [784, 0.15], [659, 0.4],
+    [523, 0.2], [659, 0.2], [784, 0.6],
+  ];
+  let t = audioCtx.currentTime + 0.1;
+  fanfare.forEach(([freq, dur]) => {
+    playNote(freq, t, dur, 0.18, 'square');
+    t += dur + 0.02;
+  });
+}
+
+// ─── Event Listeners ──────────────────────────────────────────────────────────
+const DIR_KEYS = new Set(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','W','a','A','s','S','d','D']);
+
+document.addEventListener('keydown', e => {
+  if (!DIR_KEYS.has(e.key)) return;
+  e.preventDefault();
+  if (heldKeys[e.key]) return; // already held, animation handles repeat
+  heldKeys[e.key] = true;
+  if (!gameActive) return;
+  switch(e.key) {
+    case 'ArrowUp':    case 'w': case 'W': movePlayer( 0, -1); break;
+    case 'ArrowDown':  case 's': case 'S': movePlayer( 0,  1); break;
+    case 'ArrowLeft':  case 'a': case 'A': movePlayer(-1,  0); break;
+    case 'ArrowRight': case 'd': case 'D': movePlayer( 1,  0); break;
+  }
+});
+
+document.addEventListener('keyup', e => {
+  delete heldKeys[e.key];
+  // Clear queue if the released key was the queued direction
+  if (moveQueue) {
+    const held = getHeldMove();
+    if (!held) moveQueue = null;
+  }
+});
+
+document.querySelectorAll('.difficulty-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.difficulty-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    difficulty = btn.dataset.diff;
+  });
+});
+
+document.getElementById('new-game-btn').addEventListener('click', () => {
+  stopMusic();
+  const overlay = document.getElementById('overlay');
+  document.getElementById('overlay-title').textContent = 'The Labyrinth Awaits';
+  document.getElementById('overlay-msg').textContent = '';
+  overlay.classList.add('hidden');
+  startGame();
+});
+
+document.getElementById('music-btn').addEventListener('click', () => {
+  const btn = document.getElementById('music-btn');
+  musicMuted = !musicMuted;
+  if (musicMuted) {
+    stopMusic();
+    btn.textContent = '♪ Music OFF';
+    btn.classList.add('muted');
+  } else {
+    btn.textContent = '♪ Music ON';
+    btn.classList.remove('muted');
+    if (gameActive) startMusic();
+  }
+});
+
+// Touch / swipe support
+let touchStart = null;
+canvas.addEventListener('touchstart', e => { touchStart = e.touches[0]; }, { passive: true });
+canvas.addEventListener('touchend', e => {
+  if (!touchStart) return;
+  const dx = e.changedTouches[0].clientX - touchStart.clientX;
+  const dy = e.changedTouches[0].clientY - touchStart.clientY;
+  if (Math.abs(dx) > Math.abs(dy)) {
+    movePlayer(dx > 0 ? 1 : -1, 0);
+  } else {
+    movePlayer(0, dy > 0 ? 1 : -1);
+  }
+  touchStart = null;
+}, { passive: true });
+
+// ─── Boot ─────────────────────────────────────────────────────────────────────
+resizeCanvas(11, 11, 42); // default size for overlay
+ctx.fillStyle = '#0d0500';
+ctx.fillRect(0, 0, canvas.width, canvas.height);
+drawMaze();
+</script>
+</body>
+</html>

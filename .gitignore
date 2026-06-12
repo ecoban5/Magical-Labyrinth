@@ -1,0 +1,9 @@
+# Godot import cache / editor state
+godot/.godot/
+
+# Godot editor binaries (downloaded locally, not part of the game)
+Godot_v*/
+
+# OS cruft
+Thumbs.db
+.DS_Store
