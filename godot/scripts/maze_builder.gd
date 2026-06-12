@@ -101,6 +101,7 @@ func build(maze: Array, portals: Array[Vector2i], goal: Vector2i) -> void:
 		_add_pillar(c)
 
 	_add_decorations(wall_data, cols * rows)
+	_add_base_details(wall_data)
 	_build_goal_tower(goal)
 	for p in portals:
 		_build_portal(p)
@@ -383,6 +384,141 @@ func _torch_ember_mesh() -> SphereMesh:
 		em.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		_torch_ember_mesh_cache.material = em
 	return _torch_ember_mesh_cache
+
+
+# ── Wall-base details ─────────────────────────────────────────────────────────
+## Breaks up the hard wall/floor line with dirt patches, crumbled stone and
+## sparse vegetation. Uses MultiMesh instancing — Legendary has ~4000 wall
+## faces, so individual nodes would be far too heavy.
+func _add_base_details(wall_data: Array) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash("base-details")
+	var dirt_xf: Array[Transform3D] = []
+	var rock_xf: Array[Transform3D] = []
+	var grass_xf: Array[Transform3D] = []
+	var glow_xf: Array[Transform3D] = []
+
+	for wd in wall_data:
+		for side in [-1.0, 1.0]:
+			var n := Vector3(side, 0, 0) if wd.is_ew else Vector3(0, 0, side)
+			var along := Vector3(0, 0, 1) if wd.is_ew else Vector3(1, 0, 0)
+			var base := Vector3(wd.wx, 0, wd.wz) + n * (WALL_T / 2)
+
+			# Dirt patch hugging the wall base (flat, irregular, semi-transparent)
+			if rng.randf() < 0.55:
+				var p := base + n * (0.1 + rng.randf() * 0.25) + along * ((rng.randf() - 0.5) * CELL * 0.8)
+				p.y = 0.012 + rng.randf() * 0.006  # avoid z-fighting the floor and each other
+				var s := 0.5 + rng.randf() * 1.0
+				var b := Basis(Vector3.UP, rng.randf() * TAU) * Basis(Vector3.RIGHT, -PI / 2)
+				b = b.scaled(Vector3(s, s * (0.45 + rng.randf() * 0.4), 1))
+				dirt_xf.append(Transform3D(b, p))
+
+			# Crumbled stone: a cluster of small angular chunks, partly sunk in
+			if rng.randf() < 0.45:
+				var cluster := base + n * (0.12 + rng.randf() * 0.2) + along * ((rng.randf() - 0.5) * CELL * 0.8)
+				for i in 2 + rng.randi() % 4:
+					var rp := cluster + n * rng.randf() * 0.25 + along * ((rng.randf() - 0.5) * 0.45)
+					var rs := 0.35 + rng.randf() * 1.1
+					rp.y = rs * 0.045  # roughly half-buried
+					var rb := Basis.from_euler(Vector3(rng.randf() * TAU, rng.randf() * TAU, rng.randf() * TAU))
+					rb = rb.scaled(Vector3(rs, rs * (0.6 + rng.randf() * 0.5), rs * (0.7 + rng.randf() * 0.5)))
+					rock_xf.append(Transform3D(rb, rp))
+
+			# Grass tuft: a few thin blades leaning at random angles
+			if rng.randf() < 0.3:
+				var tuft := base + n * (0.12 + rng.randf() * 0.22) + along * ((rng.randf() - 0.5) * CELL * 0.75)
+				for i in 3 + rng.randi() % 5:
+					var gp := tuft + Vector3((rng.randf() - 0.5) * 0.14, 0, (rng.randf() - 0.5) * 0.14)
+					var gs := 0.6 + rng.randf() * 0.9
+					gp.y = 0.1 * gs  # cone origin is its center
+					var gb := Basis(Vector3.UP, rng.randf() * TAU)
+					gb = gb * Basis(Vector3.RIGHT, (rng.randf() - 0.3) * 0.45)  # lean
+					gb = gb.scaled(Vector3(gs, gs, gs))
+					grass_xf.append(Transform3D(gb, gp))
+
+			# Rare softly-glowing spore plant — the magical accent
+			if rng.randf() < 0.06:
+				var sp := base + n * (0.15 + rng.randf() * 0.2) + along * ((rng.randf() - 0.5) * CELL * 0.7)
+				var ss := 0.6 + rng.randf() * 0.8
+				sp.y = 0.045 * ss
+				var sb := Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(ss, ss * (0.8 + rng.randf() * 0.5), ss))
+				glow_xf.append(Transform3D(sb, sp))
+
+	# Dirt: flat radial-gradient quads
+	var dirt_grad := Gradient.new()
+	dirt_grad.add_point(0.55, Color(0.1, 0.07, 0.05, 0.5))
+	dirt_grad.set_color(0, Color(0.12, 0.085, 0.06, 0.85))
+	dirt_grad.set_color(dirt_grad.get_point_count() - 1, Color(0.1, 0.07, 0.05, 0.0))
+	var dirt_tex := GradientTexture2D.new()
+	dirt_tex.gradient = dirt_grad
+	dirt_tex.fill = GradientTexture2D.FILL_RADIAL
+	dirt_tex.fill_from = Vector2(0.5, 0.5)
+	dirt_tex.fill_to = Vector2(0.5, 0.0)
+	dirt_tex.width = 64
+	dirt_tex.height = 64
+	var dirt_mat := StandardMaterial3D.new()
+	dirt_mat.albedo_texture = dirt_tex
+	dirt_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	dirt_mat.roughness = 1.0
+	var dirt_mesh := QuadMesh.new()
+	dirt_mesh.size = Vector2(1.0, 0.65)
+	dirt_mesh.material = dirt_mat
+	_make_multimesh(dirt_mesh, dirt_xf)
+
+	# Rocks: low-poly spheres read as angular rubble once randomly scaled
+	var rock_mat := StandardMaterial3D.new()
+	rock_mat.albedo_color = Color(0.38, 0.34, 0.3)
+	rock_mat.roughness = 0.95
+	var rock_mesh := SphereMesh.new()
+	rock_mesh.radius = 0.09
+	rock_mesh.height = 0.18
+	rock_mesh.radial_segments = 5
+	rock_mesh.rings = 3
+	rock_mesh.material = rock_mat
+	_make_multimesh(rock_mesh, rock_xf)
+
+	# Grass: thin cones with the faintest magical glow so they read in the dark
+	var grass_mat := StandardMaterial3D.new()
+	grass_mat.albedo_color = Color(0.16, 0.38, 0.14)
+	grass_mat.roughness = 1.0
+	grass_mat.emission_enabled = true
+	grass_mat.emission = Color(0.1, 0.35, 0.12)
+	grass_mat.emission_energy_multiplier = 0.25
+	var grass_mesh := CylinderMesh.new()
+	grass_mesh.top_radius = 0.0
+	grass_mesh.bottom_radius = 0.011
+	grass_mesh.height = 0.2
+	grass_mesh.radial_segments = 4
+	grass_mesh.material = grass_mat
+	_make_multimesh(grass_mesh, grass_xf)
+
+	# Spore plants: squat glowing cyan blobs, like tiny luminous mushrooms
+	var glow_mat := StandardMaterial3D.new()
+	glow_mat.albedo_color = Color(0.5, 0.9, 0.85)
+	glow_mat.emission_enabled = true
+	glow_mat.emission = Color(0.25, 0.8, 0.7)
+	glow_mat.emission_energy_multiplier = 1.4
+	var glow_mesh := SphereMesh.new()
+	glow_mesh.radius = 0.05
+	glow_mesh.height = 0.09
+	glow_mesh.radial_segments = 6
+	glow_mesh.rings = 3
+	glow_mesh.material = glow_mat
+	_make_multimesh(glow_mesh, glow_xf)
+
+
+func _make_multimesh(mesh: Mesh, xforms: Array[Transform3D]) -> void:
+	if xforms.is_empty():
+		return
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.mesh = mesh
+	mm.instance_count = xforms.size()
+	for i in xforms.size():
+		mm.set_instance_transform(i, xforms[i])
+	var inst := MultiMeshInstance3D.new()
+	inst.multimesh = mm
+	add_child(inst)
 
 
 func _build_goal_tower(goal: Vector2i) -> void:
