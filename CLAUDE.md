@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Version control
+
+GitHub repo: https://github.com/ecoban5/Magical-Labyrinth (remote `origin`, branch `main`). **Commit and push changes after completing each piece of work.** The `.gitignore` excludes `godot/.godot/` (import cache) and the locally extracted Godot editor binaries (`Godot_v*/`) — keep it that way.
+
 ## Project layout
 
 Three implementations of the same maze game live side by side:
